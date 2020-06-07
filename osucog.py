@@ -14,12 +14,7 @@ def calculateacc(count300, count100, count50, countmiss):
 class osu(commands.Cog):
     def __init__(self,client):
         self.client = client
-
-        key = (
-            "xxxxxxxx"
-        )
-
-        self.osuapi = OsuApi(key, connector=ReqConnector())
+        self.osuapi = OsuApi(self.client.osukey, connector=ReqConnector())
 
     @commands.command()
     async def osubest(self, ctx, osuusername=None, numberofscores=None):

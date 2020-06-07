@@ -32,12 +32,23 @@ async def reload(ctx, ext=None):
     if ext == None:
         client.reload_extension('osucog')
         client.reload_extension('tictactoecog')
+        client.reload_extension('funcog')
     else:
         client.reload_extension(ext)
 
     await ctx.send("okay~~!")
     return
 
+@client.event
+async def on_message(ctx):
+    if ctx.author == client.user: # ignore own messages
+        return
+
+    if "thanks kurumi" in ctx.content.lower():
+        await ctx.channel.send("no problem~~!")
+
+    await client.process_commands(ctx)
+    return
 
 @client.event
 async def on_ready():
@@ -48,9 +59,10 @@ async def on_ready():
 
     # load all extensions
     #client.load_extension('smokecog')
-    #client.load_extension('steamcog')
+    client.osukey = sys.argv[2]
     client.load_extension('osucog')
     client.load_extension('tictactoecog')
+    client.load_extension('funcog')
 
     return
 
