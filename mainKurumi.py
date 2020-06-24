@@ -5,11 +5,13 @@ from discord.ext import commands
 
 import sys
 import asyncio
+import dfunctions
 
 from random import seed
 from random import randint
 
 client = commands.Bot(command_prefix='u&')
+#client.remove_command('help')
 seed()
 
 async def randomstatus(client):
@@ -33,10 +35,24 @@ async def reload(ctx, ext=None):
         client.reload_extension('osucog')
         client.reload_extension('tictactoecog')
         client.reload_extension('funcog')
+        client.reload_extension('musiccog')
     else:
         client.reload_extension(ext)
 
     await ctx.send("okay~~!")
+    return
+
+@client.command()
+async def info(ctx):
+    text = ""
+    text += "GitHub Repository: github.com/iceCuube/kurumi-discord\n"
+    text += "Discord Server: discord.gg/AH9Xgxq"
+
+    embedinfo = dfunctions.generatesimpleembed("❤️ Kurumi-Chan ❤️", text, colour=discord.Colour.magenta())
+    embedinfo.set_thumbnail(url="https://i.ibb.co/Z25Tg7Z/mushroomxpfp.png")
+
+    await ctx.send(embed=embedinfo)
+
     return
 
 @client.event
@@ -63,6 +79,7 @@ async def on_ready():
     client.load_extension('osucog')
     client.load_extension('tictactoecog')
     client.load_extension('funcog')
+    client.load_extension('musiccog')
 
     return
 

@@ -1,6 +1,8 @@
 import discord
 from discord.ext import commands
+from discord.utils import get
 import random
+import asyncio
 
 import dfunctions
 
@@ -21,43 +23,66 @@ eightballresponse = [
 ]
 
 kurumilinks = [
-    "https://imgur.com/AQ8ZkBe.png",
-    "https://imgur.com/EBmZedG.png",
-    "https://imgur.com/GoE7KYJ.png",
-    "https://imgur.com/qcGFYnX.png",
-    "https://imgur.com/0cz7IFw.png",
-    "https://imgur.com/RjFvx3s.png",
-    "https://imgur.com/fxxNUwT.png",
-    "https://imgur.com/7Ja9WAI.png",
-    "https://imgur.com/kRuwkMz.png",
-    "https://imgur.com/v1aNLBQ.jpg",
-    "https://imgur.com/MMiyxIu.png",
-    "https://imgur.com/pIL4TbL.png",
-    "https://imgur.com/qc7wCxx.png",
-    "https://imgur.com/036r5Os.jpg",
-    "https://imgur.com/EFr5JVz.png",
-    "https://imgur.com/uCBwkUk.png",
-    "https://imgur.com/E1LwYIW.png",
-    "https://imgur.com/whwudHp.jpg",
-    "https://imgur.com/g4skISJ.png",
-    "https://imgur.com/oMU5djI.png",
-    "https://imgur.com/UHQX5rr.png",
-    "https://imgur.com/IgkSG6Y.png",
-    "https://imgur.com/i4NioYS.png",
-    "https://imgur.com/YpatbEK.png",
-    "https://imgur.com/L0cvL0T.png",
-    "https://imgur.com/xhlgJax.png",
-    "https://imgur.com/mptR772.png",
-    "https://imgur.com/0ZNkaNE.png",
-    "https://imgur.com/GM4CqFf.png",
-    "https://imgur.com/JoOuVmA.png",
-    "https://imgur.com/N2mPkcv.png",
-    "https://imgur.com/ARqnBfu.png",
+    "https://i.ibb.co/S67FnGT/menhera6x4.png",
+    "https://i.ibb.co/rcmRFfr/menhera4x4.png",
+    "https://i.ibb.co/0DB15SK/okx4.png",
+    "https://i.ibb.co/LgzfYyV/nicex4.png",
+    "https://i.ibb.co/7RcSzJJ/sitx4.png",
+    "https://i.ibb.co/93x5k6g/glassx4.png",
+    "https://i.ibb.co/3mW3dTJ/menhera2x4.png",
+    "https://i.ibb.co/B4pDHVD/f.png",
+    "https://i.ibb.co/JRwfML9/dabx4.png",
+    "https://i.ibb.co/GknHr4p/waterx4.png",
+    "https://i.ibb.co/TqHG76x/cringex4.png",
+    "https://i.ibb.co/3p9t8n6/prayx4.png",
+    "https://i.ibb.co/9vD9zdY/headphonesx4.png",
+    "https://i.ibb.co/3MhXnbh/dogx4.png",
+    "https://i.ibb.co/yYWNy8X/angelx4.png",
+    "https://i.ibb.co/ypTqGVr/dogangryx4.png",
+    "https://i.ibb.co/N1hG8s7/wavex4.png",
+    "https://i.ibb.co/kS83mz1/flickx4.png",
+    "https://i.ibb.co/c6Qqrd7/potatox4.png",
+    "https://i.ibb.co/9N0sYnX/lightx4.png",
+    "https://i.ibb.co/ZzbxtVs/cry2x4.png",
+    "https://i.ibb.co/dDD4Kgk/hatx4.png",
+    "https://i.ibb.co/dJsrr1L/bedx4.png",
+    "https://i.ibb.co/yFfpf6h/menhera3x4.png",
 ]
+
+rpsdict = {
+    "rock": ["scissors", "🗿"],
+    "scissors": ["paper", "✂️"],
+    "paper": ["rock", "🧻"]
+}
+
+async def slapfunc(member, slaprole):
+    await asyncio.sleep(10)
+    await member.remove_roles(slaprole)
+
+    return
 
 class fun(commands.Cog):
     def __init__(self,client):
         self.client = client
+        return
+
+    @commands.command()
+    async def say(self, ctx, *, text):
+        await ctx.send(text)
+        return
+
+    @commands.command()
+    async def hug(self, ctx, receiver: discord.Member):
+        if receiver == None:
+            await ctx.send("erm... i cant find that person")
+            return
+
+        embedinfo = dfunctions.generatesimpleembed(ctx.author.display_name + " hugs " + receiver.display_name, " ", colour=discord.Colour.magenta())
+        embedinfo.set_image(url="https://v.redd.it/y0b4muq5jlu41")
+
+        if receiver == ctx.guild.me:
+            await ctx.send(":heart:")
+            
         return
 
     @commands.command()
@@ -68,6 +93,28 @@ class fun(commands.Cog):
         embedinfo.set_image(url=kurumilinks[rand])
 
         await ctx.send(embed=embedinfo)
+        return
+
+    @commands.command()
+    async def rps(self, ctx, item=None):
+        if item == None:
+            await ctx.send("you need to state if you're using rock, paper or scissors...")
+            return
+
+        if item != "rock" and item != "paper" and item != "scissors":
+            await ctx.send("i dont think that item exists in rock, paper, scissors...")
+            return
+
+        # pick random item
+        clientitem = ["rock", "paper", "scissors"][random.randint(0,2)]
+
+        if item == clientitem:
+            await ctx.send("i picked " + clientitem + " " + rpsdict[clientitem][1] + " looks like it's a tie 😅")
+        elif rpsdict[clientitem][0] == item: # if bot wins
+            await ctx.send("i picked " + clientitem + " " + rpsdict[clientitem][1] + " i win!")
+        else: # bot loses lol
+            await ctx.send("i picked " + clientitem + " " + rpsdict[clientitem][1] + " looks like i lost...")
+
         return
 
     @commands.command()
@@ -94,13 +141,16 @@ class fun(commands.Cog):
     @commands.command()
     async def secks(self, ctx, receiver: discord.Member):
         if receiver == None:
-            await ctx.send("i cant find that member")
+            await ctx.send("erm... i cant find that person")
             return
 
-        embedinfo = dfunctions.generatesimpleembed(ctx.author.display_name + " has secksd " + receiver.display_name, " ", colour=discord.Colour.magenta())
+        embedinfo = dfunctions.generatesimpleembed(ctx.author.display_name + " secksd " + receiver.display_name, " ", colour=discord.Colour.magenta())
         embedinfo.set_image(url="https://v.redd.it/y0b4muq5jlu41")
 
         await ctx.send(embed=embedinfo)
+
+        if receiver == ctx.guild.me:
+            await ctx.send(":flushed:")
 
         return
 
