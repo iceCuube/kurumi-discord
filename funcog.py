@@ -1,10 +1,12 @@
 import discord
 from discord.ext import commands
 from discord.utils import get
+
 import random
 import asyncio
 
 import dfunctions
+import calendar
 
 eightballresponse = [
     "Ask again later",
@@ -54,12 +56,6 @@ rpsdict = {
     "scissors": ["paper", "✂️"],
     "paper": ["rock", "🧻"]
 }
-
-async def slapfunc(member, slaprole):
-    await asyncio.sleep(10)
-    await member.remove_roles(slaprole)
-
-    return
 
 class fun(commands.Cog):
     def __init__(self,client):
@@ -152,6 +148,116 @@ class fun(commands.Cog):
         if receiver == ctx.guild.me:
             await ctx.send(":flushed:")
 
+        return
+
+    @commands.command(aliases=["av"])
+    async def avatar(self, ctx, avmember: discord.Member = False):
+        if avmember == None:
+            await ctx.send("erm... i cant find that person")
+            return
+
+        if not avmember:
+            avmember = ctx.author
+
+        text = ""
+
+        text += "\n✅ | **Bot**" if avmember.bot else "\n❌ | **Bot**"
+        text += "\n✅ | **System**" if avmember.system else "\n❌ | **System**"
+
+        text += "\n\n[This user is now streaming!]({})".format(avmember.activity.url) if type(avmember.activity) == discord.Streaming else "\n\n"
+
+        embedinfo = dfunctions.generatesimpleembed(None, text, colour=discord.Colour.magenta())
+
+        embedinfo.set_author(name="{}#{}".format(avmember.name, avmember.discriminator), url=str(avmember.avatar_url), icon_url=str(avmember.avatar_url))
+        embedinfo.set_image(url=str(avmember.avatar_url))
+        embedinfo.set_footer(text="user id: " + str(avmember.id))
+
+        embedinfo.add_field(name="Server Nickname", value=avmember.nick)
+        embedinfo.add_field(name="Highest Role", value=str(avmember.top_role))
+        embedinfo.add_field(name="Joined At", value="{} {} {}".format(avmember.joined_at.day, calendar.month_name[avmember.joined_at.month], avmember.joined_at.year))
+        if avmember.premium_since != None:
+            embedinfo.add_field(name="Server Boosted At", value="{} {} {}".format(avmember.premium_since.day, calendar.month_name[avmember.premium_since.month], avmember.premium_since.year))
+        else:
+            embedinfo.add_field(name="Server Boosted At", value="Did Not Boost")
+
+        await ctx.send(embed=embedinfo)
+        return
+
+    @commands.command(aliases=["pfp"])
+    async def userpic(self, ctx, userid=None):
+        if userid == None:
+            user = ctx.author
+        else: 
+            try:
+                userid = int(userid)
+            except:
+                await ctx.send("thats not a number!")
+                return
+
+            user = self.client.get_user(userid)
+
+            if user == None:
+                await ctx.send("i could find a user with that id")
+                return
+
+        await ctx.send(str(user.avatar_url_as(static_format="png", size=2048)))
+        #await ctx.send(embed=embedinfo)
+        return
+
+    @commands.command(aliases=["sv"])
+    async def server(self, ctx):
+        text = None
+
+        embedinfo = dfunctions.generatesimpleembed(None, text, colour=discord.Colour.magenta())
+
+        embedinfo.set_author(name=str(ctx.guild), url=str(ctx.guild.icon_url), icon_url=str(ctx.guild.icon_url))
+        embedinfo.set_thumbnail(url=str(ctx.guild.icon_url))
+        embedinfo.set_image(url=str(ctx.guild.splash_url))
+        embedinfo.set_footer(text="server id: " + str(ctx.guild.id))
+
+        embedinfo.add_field(name="Member Count", value=str(ctx.guild.member_count))
+        embedinfo.add_field(name="Boost Count", value=str(ctx.guild.premium_subscription_count))
+        embedinfo.add_field(name="Boost Level", value="None" if ctx.guild.premium_tier == 0 else str(ctx.guild.premium_tier))
+
+        embedinfo.add_field(name="Server Region", value=str(ctx.guild.region))
+        embedinfo.add_field(name="AFK Channel", value="None" if ctx.guild.afk_channel == None else str(ctx.guild.afk_channel))
+        embedinfo.add_field(name="AFK Timeout", value="{} minutes".format(int(ctx.guild.afk_timeout/60)))
+
+        embedinfo.add_field(name="Owner", value=ctx.guild.owner.mention)
+        embedinfo.add_field(name="Created At", value="{} {} {}".format(ctx.guild.created_at.day, calendar.month_name[ctx.guild.created_at.month], ctx.guild.created_at.year))
+        embedinfo.add_field(name="Language", value=ctx.guild.preferred_locale)
+
+        await ctx.send(embed=embedinfo)
+        return
+
+    @commands.command(aliases=["em", "emote"])
+    async def emoji(self, ctx, emoji: discord.PartialEmoji = None):
+        if emoji == None:
+            await ctx.send("you need to specify an emoji!")
+            return
+
+        text = ""
+
+        #text += "{}".format(str(emoji))
+
+        text += "\n\n✅ | **Animated**" if emoji.animated else "\n\n❌ | **Animated**"
+
+        embedinfo = dfunctions.generatesimpleembed(None, text, colour=discord.Colour.magenta())
+
+        embedinfo.set_author(name=":{}:".format(emoji.name), icon_url=str(emoji.url), url=str(emoji.url))
+        embedinfo.set_image(url=str(emoji.url))
+        embedinfo.set_footer(text="id: {}".format(emoji.id))
+        print("ajibdsas")
+        #embedinfo.add_field(name="Created At", value="{} {} {}".format(emoji.created_at.day, calendar.month_name[emoji.created_at.month], emoji.created_at.year))
+
+        await ctx.send(embed=embedinfo)
+        return
+
+    @emoji.error
+    async def emoji_handler(self, ctx, error):
+        # handle bad argument
+        if isinstance(error, commands.BadArgument):
+            await ctx.send("i couldnt get that emoji. it might not be a custom emoji!")
         return
 
 def setup(client):

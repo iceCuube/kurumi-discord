@@ -46,14 +46,19 @@ class YTDLSource(discord.PCMVolumeTransformer):
     @classmethod
     async def from_url(cls, url, *, loop=None, stream=False):
         loop = loop or asyncio.get_event_loop()
+        info = ytdl.extract_info(url, download=False)
+
+        if 'entries' in info:
+            # take first item from a playlist
+            info = info['entries'][0]
+
+        if info["duration"] > 600: # around 10 mins
+            return [100, info]
+
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=True))
 
         if 'entries' in data:
-            # take first item from a playlist
             data = data['entries'][0]
-
-        if data["duration"] > 600: # around 10 mins
-            return 100
 
         filename = data['url'] if stream else ytdl.prepare_filename(data)
 
@@ -87,8 +92,16 @@ class MusicPlayer:
         self.queue = asyncio.Queue()
         self.next = asyncio.Event()
         self.current = None
+        self.looping = False
 
         ctx.bot.loop.create_task(self.playerloop())
+
+    def getqueueitems(self, maxitems=5):
+        print(self.queue.qsize())
+        if self.queue.qsize() < 1:
+            return None
+
+        return list(itertools.islice(self.queue._queue, 0, maxitems))
 
     async def playerloop(self):
         await self.bot.wait_until_ready()
@@ -105,14 +118,17 @@ class MusicPlayer:
         while not self.bot.is_closed():
             self.next.clear()
 
-            source = await self.queue.get()
+            if not self.looping:
+                source = await self.queue.get()
+            elif self.current == None:
+                source = await self.queue.get()
 
             self.current = source[0]
             self.guild.voice_client.play(source[0], after=lambda _: self.bot.loop.call_soon_threadsafe(self.next.set))
 
-            embedinfo = dfunctions.generatesimpleembed(source[0].title, "[youtube link](https://youtu.be/" + source[1]["display_id"] + ")\n\n[download video](" + source[1]["url"] + ")\n" + "[download audio](" + source[1]["formats"][0]["url"] + ")", colour=discord.Colour.magenta())
+            embedinfo = dfunctions.generatesimpleembed(source[0].title, "[youtube link](https://youtu.be/" + source[1]["display_id"] + ")\n\n[download video](" + source[1]["url"] + ")\n" + "[download audio](" + source[1]["formats"][0]["url"] + ")", colour=discord.Colour(int("0xFF0000", 16)))
             embedinfo.set_thumbnail(url="https://img.youtube.com/vi/" + source[1]["display_id"] + "/mqdefault.jpg") # ytdl seems unreliable when getting thumbnails
-            embedinfo.set_author(name="now playing", icon_url="https://i.ibb.co/Z25Tg7Z/mushroomxpfp.png")
+            embedinfo.set_author(name="now playing", icon_url="https://i.ibb.co/c8yTt7c/music.png")
             embedinfo.add_field(name="views", value="{:,}".format(source[1]["view_count"]), inline=True)
             embedinfo.add_field(name="length", value=str(datetime.timedelta(seconds=source[1]["duration"]))[2:])
             embedinfo.add_field(name="uploaded by", value=source[1]["uploader"], inline=True)
@@ -122,7 +138,9 @@ class MusicPlayer:
             await self.next.wait()
 
             source[0].cleanup()
-            self.current = None
+
+            if not self.looping:
+                self.current = None
 
     def destroy(self, guild):
         """Disconnect and cleanup the player."""
@@ -132,6 +150,7 @@ class music(commands.Cog):
     def __init__(self,client):
         self.client = client
         self.players = {}
+        self.youtubered = int("0xFF0000", 16)
         return
 
     async def cleanup(self, guild):
@@ -166,8 +185,9 @@ class music(commands.Cog):
                     print("bruh")
                     return
 
+                await player.guild.voice_client.disconnect()
                 await player.channel.send(embed=dfunctions.generatesimpleembed("Disconnected", "I have been moved to a different channel so I have disconnected myself!"))
-
+                await self.cleanup(member.guild)
         return
 
     @commands.command(aliases=["con"])
@@ -193,13 +213,17 @@ class music(commands.Cog):
     async def disconnect(self, ctx):
         voicechannel = ctx.author.voice.channel
 
+        if ctx.guild.me.voice == None:
+            await self.cleanup(ctx.guild)
+            return
+
         if ctx.guild.me.voice.channel == voicechannel:
             voice = get(self.client.voice_clients, guild=ctx.guild)
         else:
             await ctx.send("you cant do that if you are not with me!")
             return
 
-        await voice.disconnect()
+        await self.cleanup(ctx.guild)
         return
 
     @commands.command(aliases=["p"])
@@ -226,20 +250,22 @@ class music(commands.Cog):
         async with ctx.channel.typing():
             try:
                 THE = await YTDLSource.from_url(music)
+
+                if THE[0] == 100:
+                    await ctx.send("the video \"**{}**\" is too long! (10 minute limit) get a shorter video!".format(THE[1]["title"]))
+                    return
+
                 if voice.is_playing() == True:
                     #await ctx.send("added to the queue!")
-                    embedinfo = dfunctions.generatesimpleembed(THE[0].title, "[youtube link](https://youtu.be/" + THE[1]["display_id"] + ")\n\n[download video](" + THE[1]["url"] + ")\n" + "[download audio](" + THE[1]["formats"][0]["url"] + ")", colour=discord.Colour.magenta())
+                    embedinfo = dfunctions.generatesimpleembed(THE[0].title, "[youtube link](https://youtu.be/" + THE[1]["display_id"] + ")\n\n[download video](" + THE[1]["url"] + ")\n" + "[download audio](" + THE[1]["formats"][0]["url"] + ")", colour=discord.Colour(self.youtubered))
                     embedinfo.set_thumbnail(url="https://img.youtube.com/vi/" + THE[1]["display_id"] + "/mqdefault.jpg") # ytdl seems unreliable when getting thumbnails
-                    embedinfo.set_author(name="added to queue", icon_url="https://i.ibb.co/Z25Tg7Z/mushroomxpfp.png")
+                    embedinfo.set_author(name="added to queue", icon_url="https://i.ibb.co/SXBtBm7/threedot2.png")
                     embedinfo.add_field(name="views", value="{:,}".format(THE[1]["view_count"]), inline=True)
                     embedinfo.add_field(name="length", value=str(datetime.timedelta(seconds=THE[1]["duration"]))[2:])
                     embedinfo.add_field(name="uploader", value=THE[1]["uploader"], inline=True)
                     await ctx.send(embed=embedinfo)
                 await player.queue.put(THE)
-                #player = await YTDLSource.from_url(music)
-                #if player == 100:
-                #    await ctx.send("video is too long! (10 minute limit) get a shorter video!")
-                #    return
+                
             except Exception as errorstring:
                 icecube = ctx.guild.get_member(208192812108349443)
                 if icecube == None: # fail silently if im not in the server
@@ -257,6 +283,7 @@ class music(commands.Cog):
             return await ctx.send('I am not currently playing anything!', delete_after=20)
 
         await self.cleanup(ctx.guild)
+        await ctx.send("oka")
         return
 
     @commands.command(aliases=["s"])
@@ -274,22 +301,53 @@ class music(commands.Cog):
         await ctx.send("oka")
         return
 
+    """
     @commands.command(aliases=["q"])
     async def queue(self, ctx):
         vc = ctx.voice_client
 
-        player = self.get_player(ctx)
-        if player.queue.empty():
+        print(player)
+        if player.queue.qsize() == 0:
             await ctx.send('there is nothing in the queue!')
             return
 
-        upcoming = list(itertools.islice(player.queue._queue, 0, 5))
+        upcoming = player.getqueueitems(5)
         fmt = '\n'.join("**`{}`**".format(x) for x in upcoming)
         print(fmt)
-        embedinfo = discord.Embed(title='Upcoming - Next {}'.format(len(upcoming)), description=fmt)
+        embedinfo = dfunctions.generatesimpleembed('Upcoming - Next {}'.format(len(upcoming)), fmt, colour=discord.Colour(self.youtubered))
 
         await ctx.send(embed=embedinfo)
         return
+    """
+    
+    """
+    @commands.command(aliases=["l"])
+    async def loop(self, ctx):
+        vc = ctx.voice_client
+        player = self.get_player(ctx)
+
+        if player.looping == False:
+            player.looping = True
+            await ctx.send("okay now looping")
+        else:
+            player.looping = False
+            await ctx.send("okay stopped looping")
+        return
+    
+
+    @commands.command()
+    async def remove(self, ctx, element):
+        vc = ctx.voice_client
+        player = self.get_player(ctx)
+        
+        try:
+            player.queue._getters.pop(element)
+        except ValueError:
+            pass
+
+        await ctx.send("removed")
+        return
+    """
 
 def setup(client):
     client.add_cog(music(client))

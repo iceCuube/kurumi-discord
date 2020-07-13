@@ -1,42 +1,14 @@
 # kurumi-discord
 
+libraries that are needed:
+1. discord
+2. osuapi
+3. youtube_dl
+4. faceit_data @ https://github.com/LaughingLove/faceit_api.py
+
+also ffmpeg for music
+
 run with
-`python mainKurumi.py [discordkey] [osukey]`
-
-# all commands
-
-## osu
-```
-u&osurecent
-u&osubest
-u&osuplayer
-```
-
-## tic tac toe
-```
-u&tictactoe
-u&accept
-u&decline
-```
-
-## fun
-```
-u&say
-u&randomkurumi
-u&eightball
-u&coinflip
-u&rps
-u&hug
-u&secks
-```
-
-## music
-```
-u&connect | u&con
-u&disconnect | u&dcon
-u&play | u&p
-u&skip | u&s
-u&stop
-```
+`python mainKurumi.py [discordkey] [osukey] [faceitkey]`
 
 you can thank her by saying "thanks kurumi"

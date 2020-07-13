@@ -168,7 +168,7 @@ class ttt(commands.Cog):
         return
 
     @commands.command()
-    async def accept(self, ctx):
+    async def tttaccept(self, ctx):
         if self.challenger == None:
             await ctx.send("no one asked")
             return
@@ -188,7 +188,7 @@ class ttt(commands.Cog):
         return
 
     @commands.command()
-    async def decline(self, ctx):
+    async def tttdecline(self, ctx):
         if self.challenger == None:
             await ctx.send("no one asked")
             return

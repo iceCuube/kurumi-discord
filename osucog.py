@@ -15,6 +15,8 @@ class osu(commands.Cog):
     def __init__(self,client):
         self.client = client
         self.osuapi = OsuApi(self.client.osukey, connector=ReqConnector())
+        self.osupink = int("0xFF66AA", 16)
+        return
 
     @commands.command()
     async def osubest(self, ctx, osuusername=None, numberofscores=None):
@@ -40,7 +42,7 @@ class osu(commands.Cog):
             embedinfo = discord.Embed(
                 title = beatmapinfo.title + " [" + beatmapinfo.version + "]",
                 description = beatmapinfo.artist,
-                colour = discord.Colour.magenta()
+                colour = discord.Colour(self.osupink)
             )
 
             playerinfo = "Played by: " + osuuser.username
@@ -152,7 +154,7 @@ class osu(commands.Cog):
             embedinfo = discord.Embed(
                 title = beatmapinfo.title + " [" + beatmapinfo.version + "]",
                 description = beatmapinfo.artist,
-                colour = discord.Colour.magenta()
+                colour = discord.Colour(self.osupink)
             )
 
             playerinfo = "Played by: " + osuuser.username
@@ -178,15 +180,15 @@ class osu(commands.Cog):
             embedinfo.add_field(name=scoreinfo, value=None, inline=True)
             embedinfo.add_field(name=accinfo, value=modinfo, inline=True)
             
-            await responsemessage.edit(content="Here is " + osuuser.username + "'s most recent play", embed=embedinfo)
+            await responsemessage.edit(content="Here is " + osuuser.username + "'s most recent play\n", embed=embedinfo)
             return
 
 
 
         return
 
-    @commands.command()
-    async def osuplayer(self, ctx, osuusername=None):
+    @commands.command(aliases=["osu", "osuplayer"])
+    async def osuuser(self, ctx, osuusername=None):
         responsemessage = await ctx.send("okay~~!") # this will get edited / deleted later
 
         if osuusername == None:
@@ -195,10 +197,15 @@ class osu(commands.Cog):
 
         osuuser = self.osuapi.get_user(osuusername)[0]
 
+        #result = requests.get("https://osu.ppy.sh/api/v2/spotlights", headers=self.headers)
+
+        #print(result)
+        #print(result.content)
+
         embedinfo = discord.Embed(
             title = osuuser.username + "'s osu!std Stats",
             description = None,
-            colour = discord.Colour.magenta()
+            colour = discord.Colour(self.osupink)
         )
 
         pfpurl = "https://a.ppy.sh/" + str(osuuser.user_id) + "?"
@@ -212,7 +219,7 @@ class osu(commands.Cog):
         embedinfo.add_field(name=ppinfo, value=rankinfo, inline=False)
         embedinfo.add_field(name=playtime, value=accinfo, inline=True)
 
-        await responsemessage.edit(content="Here is " + osuuser.username + "'s stats", embed=embedinfo)
+        await responsemessage.edit(content="Here is " + osuuser.username + "'s stats\n", embed=embedinfo)
 
         return
 

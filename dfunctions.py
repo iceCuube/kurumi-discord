@@ -1,18 +1,24 @@
 import discord
 import json 
 
-def formatspaces(line, maxlength, endchar="", addspace=True):
+def formatspaces(line, maxlength, endchar="", replacelast=True, addspace=True, reverse=False):
     length = len(line)
     if length > maxlength:
-        line = line[:(maxlength-3)] + "..."
-        offset = 1
+        if replacelast:
+            line = line[:(maxlength-3)] + "..."
+        else:
+            line = line[:(maxlength)]
+        offset = 0
     else:
-        offset = maxlength - length + 1
+        offset = maxlength - length
 
     line += endchar
 
-    if addspace == True:
-        line += (' ' * offset)
+    if addspace:
+        if reverse:
+            line = (' ' * offset) + line
+        else:
+            line += (' ' * offset)
 
     return line
 
