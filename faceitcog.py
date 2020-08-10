@@ -10,7 +10,6 @@ from discord.ext import commands
 import asyncio
 import requests
 import json
-from PIL import Image
 import urllib.request
 from faceit_data import FaceitData
 
@@ -255,7 +254,13 @@ class faceit(commands.Cog):
         return
 
     @commands.command(aliases=["csgolatest"])
-    async def faceitcsgolatest(self, ctx, profile):
+    async def faceitcsgolatest(self, ctx, profile, latest=1):
+        if latest < 1:
+            latest = 1
+        elif latest > 10:
+            latest = 10
+            await ctx.send("will be getting the tenth most recent match...")      
+
         info = self.faceit.player_details(nickname=profile)
         if info == None:
             await ctx.send("i couldnt find that faceit profile!")
@@ -272,17 +277,24 @@ class faceit(commands.Cog):
             await ctx.send("that user has not played any csgo matches!")
             return
 
-        match = self.faceit.player_matches(player_id=info["player_id"], game="csgo", return_items=1)
+        match = self.faceit.player_matches(player_id=info["player_id"], game="csgo", return_items=latest)
         if match == None:
             await ctx.send("i couldnt find a match!")
             return
 
-        matchstats = self.faceit.match_stats(match_id=match["items"][0]["match_id"])
+        if len(match["items"]) < latest:
+            await ctx.send("i couldnt get the match!")
+            return
+
+        matchstats = self.faceit.match_stats(match_id=match["items"][latest-1]["match_id"])
         if matchstats == None:
             await ctx.send("i couldnt get any stats for that match!")
             return
 
-        url = match["items"][0]["faceit_url"].replace("{lang}", "en")
+        url = match["items"][latest-1]["faceit_url"].replace("{lang}", "en")
+
+        dfunctions.savejson(matchstats, "faceitmatchstats.json")
+        dfunctions.savejson(match, "faceitmatch.json")
 
         teaminfo = matchstats["rounds"][0]["teams"]
         leaderboardteam1 = sorted(matchstats["rounds"][0]["teams"][0]["players"], key=lambda x: int(x["player_stats"]["Kills"]), reverse=True)
@@ -307,7 +319,7 @@ class faceit(commands.Cog):
 
         text2 += "\n#{} :: [Lv] {} :@: {} :: {} :: {} :: {} :: {} :: {} :: {} :: {} :: {} :: {} ;\n".format(
             "N",
-            dfunctions.formatspaces("Name", 20),
+            dfunctions.formatspaces("Name", 13),
             dfunctions.formatspaces("K", 3),
             dfunctions.formatspaces("D", 3),
             dfunctions.formatspaces("A", 3),
@@ -324,13 +336,13 @@ class faceit(commands.Cog):
         text2 += "\n{}[{}]".format(' '*11, teaminfo[0]["team_stats"]["Team"])
 
         for guy in leaderboardteam1:
-            level = next((item for item in match["items"][0]["teams"]["faction1"]["players"] if item["player_id"] == guy["player_id"]), None)
+            level = next((item for item in match["items"][latest-1]["teams"]["faction1"]["players"] if item["player_id"] == guy["player_id"]), None)
             if level == None:
                 return await ctx.send("an error occured")
             text2 += "\n#{} :: {} {} :@: {} :: {} :: {} :: {} :: {} :: {} :: {} :: {} :: {} :: {} ;".format(
                 x,
                 dfunctions.formatspaces("[{}]".format(level["skill_level"]), 4, replacelast=False),
-                dfunctions.formatspaces(guy["nickname"], 20),
+                dfunctions.formatspaces(guy["nickname"], 13),
                 dfunctions.formatspaces(y(guy)["Kills"], 3),
                 dfunctions.formatspaces(y(guy)["Deaths"], 3),
                 dfunctions.formatspaces(y(guy)["Assists"], 3),
@@ -344,18 +356,36 @@ class faceit(commands.Cog):
             )
             x += 1
 
-        text2 += "\n"
+        # check for leavers
+        if x <= 5:
+            for guy in match["items"][latest-1]["teams"]["faction1"]["players"]:
+                found = False
+                for guy2 in leaderboardteam1:
+                    if guy["player_id"] == guy2["player_id"]:
+                        found = True
+                        break
+
+                if found == False:
+                    text2 += "\n#{} :: {} {}    {}[LEAVER]{};".format(
+                        x,
+                        dfunctions.formatspaces("[{}]".format(guy["skill_level"]), 4, replacelast=False),
+                        dfunctions.formatspaces(guy["nickname"], 13),
+                        "\\" * 30,
+                        "\\" * 30
+                    )
+                    x += 1
+
         x = 1
-        text2 += "\n{}[{}]".format(' '*11, teaminfo[1]["team_stats"]["Team"])
+        text2 += "\n\n{}[{}]".format(' '*11, teaminfo[1]["team_stats"]["Team"])
 
         for guy in leaderboardteam2:
-            level = next((item for item in match["items"][0]["teams"]["faction2"]["players"] if item["player_id"] == guy["player_id"]), None)
+            level = next((item for item in match["items"][latest-1]["teams"]["faction2"]["players"] if item["player_id"] == guy["player_id"]), None)
             if level == None:
                 return await ctx.send("an error occured")
             text2 += "\n#{} :: {} {} :@: {} :: {} :: {} :: {} :: {} :: {} :: {} :: {} :: {} :: {} ;".format(
                 x,
                 dfunctions.formatspaces("[{}]".format(level["skill_level"]), 4, replacelast=False),
-                dfunctions.formatspaces(guy["nickname"], 20),
+                dfunctions.formatspaces(guy["nickname"], 13),
                 dfunctions.formatspaces(y(guy)["Kills"], 3),
                 dfunctions.formatspaces(y(guy)["Deaths"], 3),
                 dfunctions.formatspaces(y(guy)["Assists"], 3),
@@ -369,10 +399,34 @@ class faceit(commands.Cog):
             )
             x += 1
 
+        if x <= 5:
+            for guy in match["items"][latest-1]["teams"]["faction2"]["players"]:
+                found = False
+                for guy2 in leaderboardteam2:
+                    if guy["player_id"] == guy2["player_id"]:
+                        found = True
+                        break
+
+                if found == False:
+                    text2 += "\n#{} :: {} {}    {}[LEAVER]{};".format(
+                        x,
+                        dfunctions.formatspaces("[{}]".format(guy["skill_level"]), 4, replacelast=False),
+                        dfunctions.formatspaces(guy["nickname"], 13),
+                        "\\" * 30,
+                        "\\" * 30
+                    )
+                    x += 1
 
         text2 += "\n```"
 
-        embedinfo = dfunctions.generatesimpleembed("{} vs {}".format(teaminfo[0]["team_stats"]["Team"], teaminfo[1]["team_stats"]["Team"]), text, colour=self.faceitorange)
+        if matchstats["rounds"][0]["round_stats"]["Winner"] == teaminfo[0]["team_id"]:
+            crown1 = "👑 "
+            crown2 = ""
+        else:
+            crown1 = ""
+            crown2 = " 👑"
+
+        embedinfo = dfunctions.generatesimpleembed("{}{} vs {}{}".format(crown1, teaminfo[0]["team_stats"]["Team"], teaminfo[1]["team_stats"]["Team"], crown2), text, colour=self.faceitorange)
         self.setfaceitauthor(embedinfo)
 
         if matchstats["rounds"][0]["round_stats"]["Map"] in self.bannerlinks:
@@ -381,6 +435,41 @@ class faceit(commands.Cog):
         await ctx.send(embed=embedinfo)
         await ctx.send(text2)
 
+        return
+
+    @commands.command(aliases=["csgotop"])
+    async def faceitcsgotop(self, ctx, region=None, rank=1):
+        if region == None:
+            await ctx.send("you need to secify a region!")
+            return
+
+        try:
+            rank = int(rank)
+        except:
+            await ctx.send("thats not a number!")
+            return
+
+        info = self.faceit.game_global_ranking(game_id="csgo", region=region, starting_item_position=0, return_items=20)
+
+        if info == None:
+            await ctx.send("something went wrong!")
+            return
+
+        dfunctions.savejson(info, "faceittop.json")
+        #await ctx.send(embed=embedinfo)
+        return
+
+    @commands.command(aliases=["csgohub"])
+    async def faceitcsgohub(self, ctx, hubid=None, position=None):
+        if hubid == None:
+            await ctx.send("you need to specify the hub id")
+
+        info = self.faceit.hub_leaderboards(hub_id=hubid)
+
+        if info == None:
+            await ctx.send("something went wrong!")
+        
+        dfunctions.savejson(info, "faceithubstats.json")
         return
 
 def setup(client):

@@ -36,6 +36,10 @@ commanddict = {
         ["osubest"],
         ["osurecent"]
     ],
+    "Currency Exchanges":[
+        ["exchangerates", "rate", "rates", "ex"],
+        ["supportedcountries", "supportedrates"]
+    ],
     "Misc":[
         ["say"],
         ["hug"],
@@ -109,6 +113,7 @@ async def reload(ctx, ext=None):
         client.reload_extension('funcog')
         client.reload_extension('musiccog')
         client.reload_extension('faceitcog')
+        client.reload_extension('exchangescog')
     else:
         client.reload_extension(ext)
 
@@ -214,11 +219,14 @@ async def on_ready():
     #client.load_extension('smokecog')
     client.osukey = sys.argv[2]
     client.faceitkey = sys.argv[3]
+    client.exchangekey = sys.argv[4]
+
     client.load_extension('osucog')
     #client.load_extension('tictactoecog')
     client.load_extension('funcog')
     client.load_extension('musiccog')
     client.load_extension('faceitcog')
+    client.load_extension('exchangescog')
 
     # disconnect from all voice channels
     for vc in client.voice_clients:

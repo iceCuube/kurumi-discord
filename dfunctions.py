@@ -37,8 +37,9 @@ def generatesimpleembed(title, desc, footer=None, colour=discord.Colour.red()):
 def savejson(dictionary, name):
     try:
         jsonfile = open(name, "w")
-    except:
-        print("File cannot be openend for writing!")
+    except Exception as error:
+        print("File cannot be opened for writing!")
+        print(error)
         return False
 
     jsondump = json.dumps(dictionary, indent=4)

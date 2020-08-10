@@ -4,6 +4,7 @@ from discord.utils import get
 
 import random
 import asyncio
+import re
 
 import dfunctions
 import calendar
@@ -232,23 +233,63 @@ class fun(commands.Cog):
 
     @commands.command(aliases=["em", "emote"])
     async def emoji(self, ctx, emoji: discord.PartialEmoji = None):
+
+        # ok so apparently discord bots cant get a custom server emoji if its not in the server where the emote was uplaoded
+        # this is how to get around it
+
+        animated = False
+
         if emoji == None:
-            await ctx.send("you need to specify an emoji!")
-            return
+            #await ctx.send("you need to specify an emoji!")
+            #return
+            
+            messagehistory = await ctx.channel.history(limit=10).flatten()
+
+            for message in messagehistory:
+                emojilist = re.findall(r"<:\w*:\d*>", message.content)
+                aemojilist = re.findall(r"<a:\w*:\d*>", message.content)
+
+                if len(aemojilist) > 0:
+                    animated = True
+
+                if len(emojilist) > 0 or len(aemojilist) > 0:
+                    print("jasbd")
+
+                    if animated:
+                        emoji = aemojilist[-1]
+                        emojiname = re.findall(r"\w+", emoji)[1]
+                    else:
+                        emoji = emojilist[-1]
+                        emojiname = re.findall(r"\w+", emoji)[0]
+
+                    emojiid = int(re.findall(r"\d+", emoji)[0])
+                    emoji = get(self.client.emojis, id=str(emojiid))
+                    break
+            else:
+                await ctx.send("i couldnt find any emojis from the last 10 messages!")
+                return
 
         text = ""
 
-        #text += "{}".format(str(emoji))
-
-        text += "\n\n✅ | **Animated**" if emoji.animated else "\n\n❌ | **Animated**"
+        if emoji == None:
+            text += "\n\n✅ | **Animated**" if animated else "\n\n❌ | **Animated**"
+        else:
+            text += "\n\n✅ | **Animated**" if emoji.animated else "\n\n❌ | **Animated**"
 
         embedinfo = dfunctions.generatesimpleembed(None, text, colour=discord.Colour.magenta())
 
-        embedinfo.set_author(name=":{}:".format(emoji.name), icon_url=str(emoji.url), url=str(emoji.url))
-        embedinfo.set_image(url=str(emoji.url))
-        embedinfo.set_footer(text="id: {}".format(emoji.id))
-        print("ajibdsas")
-        #embedinfo.add_field(name="Created At", value="{} {} {}".format(emoji.created_at.day, calendar.month_name[emoji.created_at.month], emoji.created_at.year))
+        if emoji == None:
+            print("bhausd2")
+            url = "https://cdn.discordapp.com/emojis/{}.{}".format(emojiid, "gif" if animated else "png")
+            print("bhausd3")
+            embedinfo.set_author(name=":{}:".format(emojiname), icon_url=url, url=url)
+            embedinfo.set_image(url=url)
+            embedinfo.set_footer(text="id: {}".format(emojiid))
+        else:
+            embedinfo.set_author(name=":{}:".format(emoji.name), icon_url=str(emoji.url), url=str(emoji.url))
+            embedinfo.set_image(url=str(emoji.url))
+            embedinfo.set_footer(text="id: {}".format(emoji.id))
+            #embedinfo.add_field(name="Created At", value="{} {} {}".format(emoji.created_at.day, calendar.month_name[emoji.created_at.month], emoji.created_at.year))
 
         await ctx.send(embed=embedinfo)
         return

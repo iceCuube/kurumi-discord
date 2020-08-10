@@ -7,6 +7,7 @@ import asyncio
 import youtube_dl
 import datetime
 import itertools
+from async_timeout import timeout
 
 import dfunctions
 
@@ -106,22 +107,16 @@ class MusicPlayer:
     async def playerloop(self):
         await self.bot.wait_until_ready()
 
-        """
-        try:
-            # Wait for the next song. If we timeout cancel the player and disconnect...
-            async with timeout(300):  # 5 minutes...
-                source = await self.queue.get()
-        except asyncio.TimeoutError:
-            return self.destroy(self._guild)
-        """
-
         while not self.bot.is_closed():
             self.next.clear()
 
-            if not self.looping:
-                source = await self.queue.get()
-            elif self.current == None:
-                source = await self.queue.get()
+            try:
+                # Wait for the next song. If we timeout cancel the player and disconnect...
+                async with timeout(300):  # 5 minutes...
+                    source = await self.queue.get()
+            except asyncio.TimeoutError:
+                await self.channel.send("i have not played anything in a while so i am leaving!")
+                return self.destroy(self.guild)
 
             self.current = source[0]
             self.guild.voice_client.play(source[0], after=lambda _: self.bot.loop.call_soon_threadsafe(self.next.set))
@@ -144,7 +139,7 @@ class MusicPlayer:
 
     def destroy(self, guild):
         """Disconnect and cleanup the player."""
-        return self.bot.loop.create_task(self._cog.cleanup(guild))
+        return self.bot.loop.create_task(self.cog.cleanup(guild))
 
 class music(commands.Cog):
     def __init__(self,client):
